@@ -3,21 +3,73 @@ title: "Homework 5"
 author: "Calista Harris"
 format: pdf
 editor: visual
+editor_options: 
+  chunk_output_type: console
 ---
 
-## Task 1: Conceptual Questions 
+## Task 1: Conceptual Questions
 
 ### Question 1
+
 Cross-validation helps us estimate how well a random forest model is likely to perform on unseen data by repeatedly splitting the data into training and validation sets. This process reduces variability in the performance estimate that could arise from a single train/test split and allows for more reliable model assessment. Although random forests have built-in error estimation through out-of-bag observations, cross-validation can provide a complementary or alternative method, especially when comparing multiple models or tuning hyperparameters.
 
 ### Question 2
+
 The bagged tree algorithm, short for bootstrap aggregation, involves generating multiple bootstrap samples from the original dataset, fitting a decision tree to each sample, and aggregating their predictions. For regression tasks, the final prediction is the average of individual tree predictions, while for classification, it is typically determined by majority vote. This ensemble method helps reduce variance and improves predictive performance compared to a single tree model.
 
 ### Question 3
+
 A general linear model (GLM) is a statistical model where the expected value of the response variable is modeled as a linear combination of the explanatory variables. It has the form $E(Y|X)=\beta_0 + \beta_1X_1 +\beta_2X_2 + \cdots +\beta_pX_p$, and is used for tasks such as multiple linear regression and ANOVA. The model assumes the errors are normally distributed and have constant variance, making it a foundational approach for modeling relationships between variables.
 
 ### Question 4
-Adding an interaction term to a multiple linear regression model allows the effect of one explanatory variable on the response variable to depend on the level of another explanatory variable. This enables the model to capture relationships where the combined effect of two variables is not merely additive. In mathematical terms, it adds a term like $\beta_3X_1X_2$ to the model, allowing the slope of one variable to change based on the value of the other. 
+
+Adding an interaction term to a multiple linear regression model allows the effect of one explanatory variable on the response variable to depend on the level of another explanatory variable. This enables the model to capture relationships where the combined effect of two variables is not merely additive. In mathematical terms, it adds a term like $\beta_3X_1X_2$ to the model, allowing the slope of one variable to change based on the value of the other.
 
 ### Question 5
+
 Splitting the data into a training and test set allows us to evaluate how well a model generalizes to new, unseen data. The training set is used to fit the model, while the test set provides an unbiased estimate of the model’s predictive performance. This helps guard against overfitting and ensures that the model is not simply memorizing the training data, but instead learning patterns that can apply more broadly.
+
+\newpage
+
+## Task 2: Data Prep
+
+### Packages and Data
+
+```{r}
+#| message: false
+#| warning: false
+#load require libraries 
+library(tidyverse)
+library(tidymodels)
+library(caret)
+library(yardstick)
+
+#read in the heart disease dataset as a tibble
+heart <- read_csv("data/heart.csv") |> 
+  as_tibble()
+```
+
+### Question 1
+
+```{r}
+#summarize the data
+summary(heart)
+```
+
+a.  According to the summary() output, `HeartDisease` is currently treated as a numeric variable in R. This is evident from the statistical summaries displayed — Min, 1st Qu., Median, Mean, etc. — all indicators of a quantitative numeric type.
+
+b.  No, this does not make sense for modeling. The `HeartDisease` variable encodes binary outcomes — either 0 (no heart disease) or 1 (presence of heart disease). As described in Logistic Regression Models, binary outcomes should be treated as categorical when modeling classification problems. Using it as numeric may lead to inappropriate modeling choices, such as applying linear regression when logistic regression is more appropriate.
+
+### Question 2
+```{r}
+#convert HeartDisease to a factor (categorical) variable and rename it
+new_heart <- heart |> 
+  mutate(HeartDisease_status = factor(HeartDisease)) |> 
+  #drop the original numeric HeartDisease variable and the ST_Slope variable
+  select(-ST_Slope, -HeartDisease) 
+
+#view the structure of the updated data set
+glimpse(new_heart)
+```
+
+
