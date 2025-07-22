@@ -95,3 +95,39 @@ ggplot(new_heart, aes(x = MaxHR, y = Age, color = HeartDisease_status)) +
 
 ### Question 2
 The scatterplot shows non-parallel trend lines for people with and without heart disease, indicating that the relationship between Max Heart Rate and Age differs by Heart Disease. Specifically, the slope for individuals without heart disease is steeper than for those with heart disease. This suggests an interaction effect, where the impact of `MaxHR` on `Age` depends on `HeartDisease_status `. Recall Multiple Linear Regression, interaction terms allow the slope of one variable to change based on the level of another. Therefore, an interaction model is more appropriate than an additive model for this analysis.
+
+\newpage 
+
+## Task 4: Testing and Training 
+```{r}
+#set seed for reproducibility
+set.seed(101)
+
+#perform 80-20 train-test split
+heart_split <- initial_split(new_heart, prop = 0.8)
+
+#create training and test data sets
+train <- training(heart_split)
+test <- testing(heart_split)
+
+#check sizes of each set
+nrow(train)  
+nrow(test)  
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
