@@ -35,7 +35,7 @@ Splitting the data into a training and test set allows us to evaluate how well a
 
 ### Packages and Data
 
-```{r}
+```{r Packages-Data}
 #| message: false
 #| warning: false
 #load require libraries 
@@ -51,7 +51,7 @@ heart <- read_csv("data/heart.csv") |>
 
 ### Question 1
 
-```{r}
+```{r Task2-Question1}
 #summarize the data
 summary(heart)
 ```
@@ -61,7 +61,7 @@ a.  According to the summary() output, `HeartDisease` is currently treated as a 
 b.  No, this does not make sense for modeling. The `HeartDisease` variable encodes binary outcomes — either 0 (no heart disease) or 1 (presence of heart disease). As described in Logistic Regression Models, binary outcomes should be treated as categorical when modeling classification problems. Using it as numeric may lead to inappropriate modeling choices, such as applying linear regression when logistic regression is more appropriate.
 
 ### Question 2
-```{r}
+```{r Task2-Question2}
 #convert HeartDisease to a factor (categorical) variable and rename it
 new_heart <- heart |> 
   mutate(HeartDisease_status = factor(HeartDisease)) |> 
@@ -77,7 +77,7 @@ glimpse(new_heart)
 ## Task 3: EDA
 
 ### Question 1
-```{r}
+```{r Task3-Question1}
 #create the scatterplot with separate trend lines by heart disease
 ggplot(new_heart, aes(x = MaxHR, y = Age, color = HeartDisease_status)) +
   geom_point(alpha = 0.5) +
@@ -99,7 +99,7 @@ The scatterplot shows non-parallel trend lines for people with and without heart
 \newpage 
 
 ## Task 4: Testing and Training 
-```{r}
+```{r Task4}
 #set seed for reproducibility
 set.seed(101)
 
@@ -115,8 +115,105 @@ nrow(train)
 nrow(test)  
 ```
 
+\newpage
 
+## Task 5: OLS and LASSO
 
+### Question 1
+```{r Task5-Question1}
+#fit OLS model with interaction between MaxHR and HeartDisease
+ols_mlr <- lm(Age ~ MaxHR * HeartDisease_status, data = train)
+
+#report the summary output of the model
+summary(ols_mlr)
+```
+
+### Question 2
+```{r Task5-Question2}
+#predict response (Age) on test data using the OLS model
+pred_ols <- predict(ols_mlr, newdata = test)
+
+#bind predictions to test data for RMSE evaluation
+ols_results <- test |> 
+  mutate(pred = pred_ols)
+
+#compute RMSE using yardstick
+ols_rmse <- rmse(ols_results, truth = Age, estimate = pred) 
+ols_rmse
+```
+
+### Question 3
+```{r Task5-Question3}
+#(a-d) Define the recipe with normalization, dummy coding, and interaction
+LASSO_recipe <- recipe(Age ~ MaxHR + HeartDisease_status, data = train) |>
+  step_normalize(all_numeric_predictors()) |>   #(b) standardize
+  step_dummy(all_nominal_predictors()) |>       #dummy encode
+  step_interact(terms = ~ MaxHR:starts_with("HeartDisease_status")) #(c & d)
+
+#print recipe
+LASSO_recipe
+```
+
+### Question 4
+```{r Task5-Question4}
+#specify LASSO model
+LASSO_spec <- linear_reg(penalty = tune(), mixture = 1) |>
+  set_engine("glmnet")
+
+#combine recipe and model
+LASSO_wflow <- workflow() |>
+  add_recipe(LASSO_recipe) |>
+  add_model(LASSO_spec)
+
+#cross-validation folds
+set.seed(101)
+LASSO_folds <- vfold_cv(train, v = 10)
+
+#tune penalty on 10-fold CV
+LASSO_tuned <- tune_grid(
+  object = LASSO_wflow,
+  resamples = LASSO_folds,
+  grid = 25,                    #try 25 penalty values
+  metrics = metric_set(rmse)
+)
+
+#select best-performing penalty
+best_penalty <- select_best(LASSO_tuned, metric = "rmse")
+
+#finalize workflow
+final_LASSO <- finalize_workflow(LASSO_wflow, best_penalty)
+
+#fit to training data
+LASSO_fit <- fit(final_LASSO, data = train)
+
+#report the results
+tidy(LASSO_fit)
+```
+
+### Question 5
+Based on the output from the LASSO model in Question 4, we would expect the RMSE to be roughly similar to that of the OLS model. This is because all variables—including the interaction between `MaxHR` and `HeartDisease_status` have non-zero coefficients in the LASSO model. Since LASSO didn’t shrink any coefficients to zero (which it often does for variable selection), it suggests that the model complexity and fit are comparable to OLS. Therefore, the predictive performance, as measured by RMSE, is likely to be similar.
+
+### Question 6
+```{r Task5-Question6}
+#generate predictions on the test set using the final LASSO model
+LASSO_preds <- predict(LASSO_fit, new_data = test) |> 
+  bind_cols(test)  #attach predictions to the actual test data
+
+#calculate RMSE for the LASSO model using yardstick
+LASSO_rmse <- rmse(LASSO_preds, truth = Age, estimate = .pred)
+
+#create a tibble comparing RMSE between OLS and LASSO models
+compare_rmse <- tibble(
+  Model = c("OLS", "LASSO"),
+  RMSE = c(ols_rmse$.estimate, LASSO_rmse$.estimate)
+)
+
+#display the RMSE comparison
+compare_rmse
+```
+
+### Question 7
+Even though the OLS and LASSO models have different coefficient estimates, their RMSE values are roughly the same. This is because both models capture the same underlying relationship between `Age`, `MaxHR`, and `HeartDisease_status`. LASSO applies a penalty that shrinks coefficients, while OLS does not. In our results, the key predictors and their interaction were retained in both models. The LASSO coefficients are smaller due to regularization, but the predictive patterns are similar. LASSO aims to improve model generalization without drastically changing predictions when the signal is strong. Therefore, both models yield similar RMSE on the test set despite differing coefficients.
 
 
 
