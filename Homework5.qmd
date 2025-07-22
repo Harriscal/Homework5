@@ -215,8 +215,63 @@ compare_rmse
 ### Question 7
 Even though the OLS and LASSO models have different coefficient estimates, their RMSE values are roughly the same. This is because both models capture the same underlying relationship between `Age`, `MaxHR`, and `HeartDisease_status`. LASSO applies a penalty that shrinks coefficients, while OLS does not. In our results, the key predictors and their interaction were retained in both models. The LASSO coefficients are smaller due to regularization, but the predictive patterns are similar. LASSO aims to improve model generalization without drastically changing predictions when the signal is strong. Therefore, both models yield similar RMSE on the test set despite differing coefficients.
 
+\newpage 
+
+## Task 6: Logistic Regression
 
 
+### Question 1
+```{r Task6-Question1}
+#propose two logistic regression models
+
+#set seed for reproducibility
+set.seed(101)
+
+#define cross-validation: repeated 10-fold CV (3 repeats)
+ctrl <- trainControl(method = "repeatedcv", number = 10, repeats = 3)
+
+#model 1: Uses Age and MaxHR
+model_1 <- train(
+  HeartDisease_status ~ Age + MaxHR,
+  data = train,
+  method = "glm",
+  family = "binomial",
+  trControl = ctrl
+)
+
+#model 2: Uses Age, MaxHR, and ExerciseAngina
+model_2 <- train(
+  HeartDisease_status ~ Age + MaxHR + ExerciseAngina,
+  data = train,
+  method = "glm",
+  family = "binomial",
+  trControl = ctrl
+)
+
+#identify the best performing model 
+
+# Compare model performance
+model_1$resample
+model_2$resample
+
+# Get average accuracy
+mean(model_1$resample$Accuracy)
+mean(model_2$resample$Accuracy)
+```
+
+Based on repeated cross-validation accuracy, Model 2 performs slightly better than Model 1. This suggests that adding `ExerciseAngina` improves the model’s ability to classify heart disease. Recall logistic regression, including categorical predictors that are meaningfully associated with the outcome can increase model performance.
+
+### Question 2
+```{r Task6-Question2}
+#predict on test set using the better model (Model 2)
+pred <- predict(model_2, newdata = test)
+
+#confusion matrix
+confusionMatrix(pred, test$HeartDisease_status)
+```
+
+### Question 3
+From the confusion matrix, the sensitivity is 0.7660, and the specificity is 0.6778. Sensitivity measures how well the model correctly identifies individuals without heart disease (the positive class was set as 0). A sensitivity of 76.6% means that about three-quarters of healthy individuals were correctly predicted. Specificity, on the other hand, measures the model's ability to correctly detect individuals with heart disease, 67.8% of actual heart disease cases were accurately classified. Recall Logistic Regression Models, sensitivity and specificity are important diagnostic metrics, especially in healthcare. Sensitivity helps minimize false negatives, which is critical when failing to detect disease has serious consequences, while specificity reduces false positives, avoiding unnecessary stress or treatment.
 
 
 
